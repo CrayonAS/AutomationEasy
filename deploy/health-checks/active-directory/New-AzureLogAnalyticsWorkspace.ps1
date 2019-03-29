@@ -3,7 +3,7 @@ param(
     $ResourceGroupName = "active-directory-health-rg",
     $WorkspaceName = "active-directory-health-" + (Get-Random -Maximum 99999), # workspace names need to be unique - Get-Random helps with this for the example code
     $Location = "westeurope",
-    $Sku = 'Standard'
+    $Sku = 'standalone'
 )
 <#
 
@@ -44,11 +44,11 @@ Set-AzContext -SubscriptionId $subscriptionId
 # Create the resource group if needed
 try {
 
-    Get-AzResourceGroup -Name $ResourceGroup -ErrorAction Stop
+    Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction Stop
 
 } catch {
 
-    New-AzResourceGroup -Name $ResourceGroup -Location $Location
+    New-AzResourceGroup -Name $ResourceGroupName -Location $Location
 
 }
 
@@ -56,10 +56,13 @@ try {
 
 $WorkspaceParameters = @{
     Name = $WorkspaceName
-    RetentionInDays = 90
     Location = $Location
     ResourceGroupName = $ResourceGroupName
     Sku = $Sku
+}
+
+if ($Sku -eq 'standalone') {
+    $WorkspaceParameters.Add('RetentionInDays',90)
 }
 
 New-AzOperationalInsightsWorkspace @WorkspaceParameters
