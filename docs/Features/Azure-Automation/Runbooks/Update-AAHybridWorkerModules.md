@@ -4,15 +4,16 @@ NAME:       Update-AAHybridWorkerModules
 AUTHOR:     Morten Lerudjordet  
 EMAIL:      morten.lerudjordet@rewired.no  
 
-DESCRITPION:  
-This Runbook will check installed modules in AA account and attempt to download them from the configured trusted repositories on to the hybrid worker(s)
+DESCRIPTION:
+            This Runbook will check installed modules in AA account and attempt to download them from the configured trusted repositories on to the hybrid worker(s)
             It can also update modules installed by local configured repositories(using Install-Module) to the newest version available.
             The logic will not clean out older versions of modules.
-            The different behaviours are configurable by manipulating parameters of the Runbook, see the parameter description below for further details.
+            The different behaviors are configurable by manipulating parameters of the Runbook, see the parameter description below for further details.
 
-            Note:
-                All manually uploaded (not available through repositories configurable through Register-PSRepository) modules to AA will not be handled by this Runbooks, and should be handled by other means
-                Run Get-InstalledModule in PS command window (not in ISE) to check that Repository variable is set to a configured and trusted repository
+
+    Note:
+            All manually uploaded (not available through repositories configurable through Register-PSRepository) modules to AA will not be handled by this Runbooks, and should be handled by other means
+            Run Get-InstalledModule in PS command window (not in ISE) to check that Repository variable is set to a configured and trusted repository
 
 PREREQUISITES:  
 
@@ -22,15 +23,13 @@ PREREQUISITES:
 
 Azure Automation Assets:  
 
-     AAresourceGroupName                = Name of resourcegroup Azure Automation resides in
-     AAaccountName                      = Name of Azure Automation account
      AAhybridWorkerAdminCredentials     = Credential object that contains username & password for an account that is local admin on the hybrid worker(s).
                                           If hybrid worker group contains more than one worker, the account must be allowed to do remoting to all workers.
 
 .PARAMETER UpdateAllHybridGoups  
             If $true the Runbook will try to remote to all hybrid workers in every hybrid group attached to AA account.  
             $false will only update the hybrid workers in the same hybrid group the update Runbook is running on.  
-            Default is $true
+            Default is $false
 
 .PARAMETER ForceReinstallofModule  
             If $true the Runbook will try to force a uninstall-module and install-module if update-module fails.  

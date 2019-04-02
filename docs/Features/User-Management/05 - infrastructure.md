@@ -8,7 +8,7 @@
 - A Log Analytics workspace
 - Optionally configure a Hybrid Runbook Worker.
 
-Instructions is available in the [Azure Automation solution](/../../Features/Azure-Automation/04%20-%20installation.md).
+Instructions is available in the [Azure Automation solution](/../../Features/Azure-Automation/04%20-%20installation).
 
 ### Create the required Office 365 resources
 

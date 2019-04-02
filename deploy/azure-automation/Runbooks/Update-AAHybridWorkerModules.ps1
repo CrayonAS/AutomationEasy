@@ -1,7 +1,7 @@
-#Requires -Version 5.1
+#Requires -Version 5.0
 #Requires -Module AzureRM.Profile, AzureRM.Automation
 Param(
-    [bool]$UpdateAllHybridGroups = $true,
+    [bool]$UpdateAllHybridGroups = $false,
     [bool]$ForceInstallModule = $false,
     [bool]$UpdateToNewestModule = $false,
     [bool]$SyncOnly = $false,
@@ -13,7 +13,6 @@ Param(
 <#
 NAME:       Update-AAHybridWorkerModules
 AUTHOR:     Morten Lerudjordet
-EMAIL:      morten.lerudjordet@rewired.no
 
 DESCRIPTION:
             This Runbook will check installed modules in AA account and attempt to download them from the configured trusted repositories on to the hybrid worker(s)
@@ -32,17 +31,16 @@ DESCRIPTION:
 PREREQUISITES:
             Powershell version 5.1 on hybrid workers
             Latest AzureRM & AzureRM.Automation module installed on hybrid workers for first time run using Install-Module from admin PS command line
-            Make sure AzureRM.Profile has repository equal to PSGallery (use Get-InstalledModule) to check, if not use Uninstall-Module and Install-Module
-            Azure Automation Assets:
-                AAresourceGroupName             = Name of resourcegroup Azure Automation resides in
-                AAaccountName                   = Name of Azure Automation account
+            Make sure AzureRM.Profile has repository equal to PSGallery (use Get-InstalledModule) to check, if not use Uninstall-Module and Install-Module to rectify.
+
+            Mandatory Azure Automation Assets:
                 AAhybridWorkerAdminCredentials  = Credential object that contains username & password for an account that is local admin on the hybrid worker(s).
                                                   If hybrid worker group contains more than one worker, the account must be allowed to do remoting to all workers.
 
 .PARAMETER UpdateAllHybridGroups
             If $true the Runbook will try to remote to all hybrid workers in every hybrid group attached to AA account
             $false will only update the hybrid workers in the same hybrid group the update Runbook is running on
-            Default is $true
+            Default is $false
 
 .PARAMETER ForceReinstallofModule
             If $true the Runbook will try to force a uninstall-module and install-module if update-module fails
@@ -85,18 +83,56 @@ try
     {
         Write-Error -Message "Powershell version must be 5.1 or higher. Current version: $($PSVersionTable.PSVersion)" -ErrorAction Stop
     }
-    Write-Output -InputObject "Starting Runbook at time: $(Get-Date -format r).`nRunning PS version: $($PSVersionTable.PSVersion).`nWorker Name: $($env:COMPUTERNAME)"
+    $RunbookName = "Update-AAHybridWorkerModules"
+    Write-Output -InputObject "Starting Runbook: $RunbookName at time: $(get-Date -format r).`nRunning PS version: $($PSVersionTable.PSVersion)`nOn host: $($env:computername)"
     $VerbosePreference = "silentlycontinue"
     Import-Module -Name AzureRM.Profile, AzureRM.Automation -ErrorAction Continue -ErrorVariable oErr
     If ($oErr)
     {
         Write-Error -Message "Failed to load needed modules for Runbook." -ErrorAction Stop
     }
+    #region Fetch AA account information from running Runbook
+    $AutomationResource = Get-AzureRmResource -ResourceType Microsoft.Automation/AutomationAccounts
+
+    foreach ($Automation in $AutomationResource)
+    {
+        $Job = Get-AzureRmAutomationJob -ResourceGroupName $Automation.ResourceGroupName -AutomationAccountName $Automation.Name -Id $PSPrivateMetadata.JobId.Guid -ErrorAction SilentlyContinue
+        if (!([string]::IsNullOrEmpty($Job)))
+        {
+            $AutomationInformation = @{}
+            $AutomationInformation.Add("SubscriptionId", $Automation.SubscriptionId)
+            $AutomationInformation.Add("Location", $Automation.Location)
+            $AutomationInformation.Add("ResourceGroupName", $Job.ResourceGroupName)
+            $AutomationInformation.Add("AutomationAccountName", $Job.AutomationAccountName)
+            $AutomationInformation.Add("RunbookName", $Job.RunbookName)
+            $AutomationInformation.Add("JobId", $Job.JobId.Guid)
+            break;
+        }
+    }
+    #endregion
 
     #region Variables
-    # Azure Automation environment
-    $AutomationResourceGroupName = Get-AutomationVariable -Name "AAresourceGroupName" -ErrorAction Stop
-    $AutomationAccountName = Get-AutomationVariable -Name "AAaccountName" -ErrorAction Stop
+    # Extract AA account information of running Runbook
+    if ($Null -ne $AutomationInformation.ResourceGroupName)
+    {
+        $AutomationResourceGroupName = $AutomationInformation.ResourceGroupName
+        Write-Verbose -Message "Using AA account with resource group name: $AutomationResourceGroupName"
+    }
+    else
+    {
+        Write-Error -Message "Failed to retrieve AA resource group name of account running Runbook" -ErrorAction Stop
+    }
+    if ($Null -ne $AutomationInformation.AutomationAccountName)
+    {
+        $AutomationAccountName = $AutomationInformation.AutomationAccountName
+        Write-Verbose -Message "Using AA account with name: $AutomationAccountName"
+    }
+    else
+    {
+        Write-Error -Message "Failed to retrieve AA name of account running Runbook" -ErrorAction Stop
+    }
+
+    # Admin credentials for hybrid workers must exist as an credential asset in AA
     $AAworkerCredential = Get-AutomationPSCredential -Name "AAhybridWorkerAdminCredentials" -ErrorAction Stop
 
     # Azure Automation Login for Resource Manager
@@ -104,13 +140,10 @@ try
     $AzureRunAsCertificate = Get-AutomationCertificate -Name "AzureRunAsCertificate" -ErrorAction Stop
 
     # Local variables
-    $RunbookName = "Update-AAHybridWorkerModules"
     $RunbookJobHistoryDays = -1
     #endregion
 
     $VerbosePreference = "continue"
-
-    #TODO: Have check for running under admin rights
 
     #region Authenticate to Azure
     # ADD certificate if it is not in the cert store of the user
@@ -228,8 +261,7 @@ try
                 }
             }
         }
-        Write-Output -InputObject "Forcing install of PowerShellGet from PSGallery"
-        # PSGallery as source is hardcoded and not using the ModuleRepositoryName variable
+        Write-Output -InputObject "Forcing install of PowerShellGet from $($Using:ModuleRepositoryName)"
         $VerboseLog = Install-Module -Name PowerShellGet -AllowClobber -Force -Repository $Using:ModuleRepositoryName -ErrorAction Continue -ErrorVariable oErr -Verbose:$True -Confirm:$False 4>&1
         if ($oErr)
         {
@@ -643,5 +675,5 @@ catch
 }
 finally
 {
-    Write-Output -InputObject "Runbook ended at time: $(get-Date -format r)"
+    Write-Output -InputObject "Runbook: $RunbookName ended at time: $(get-Date -format r)"
 }

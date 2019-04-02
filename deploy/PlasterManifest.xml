@@ -4,14 +4,15 @@
   <metadata>
     <name>AutomationEasy</name>
     <id>48b71a26-faae-44a7-8fe9-f56236712021</id>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <title>AutomationEasy</title>
     <description></description>
     <author>AutomationEasy</author>
     <tags></tags>
   </metadata>
   <parameters>
-    <parameter name="FeatureSelect" type="multichoice" prompt="Please select features to install" default='0,1'>
+    <parameter name="FeatureSelect" type="multichoice" prompt="Please select features to install" default='1,2'>
+      <choice label="Active &amp;Directory Health Check" help="Deployment will contain the Active Directory Health Check feature" value="ADHealthCheck" />
       <choice label="&amp;User Management" help="Deployment will contain the User Management feature" value="UserManagement" />
       <choice label="&amp;Azure Automation" help="Deployment will contain the Azure Automation feature" value="AzureAutomation" />
     </parameter>
@@ -26,6 +27,8 @@
     <parameter name="SharePointDepartmentListName" condition='$PLASTER_PARAM_FeatureSelect -contains "UserManagement"' type="text" prompt="Name of the sharepoint list that contains Department configuration" default="Department" />
   </parameters>
   <content>
+    <message condition='$PLASTER_PARAM_FeatureSelect -contains "ADHealthCheck"'>Creating folder structure for Active Directory Health Check</message>
+    <file condition='$PLASTER_PARAM_FeatureSelect -contains "ADHealthCheck"' source='health-checks/active-directory/**' destination='active-directory-health-check/'/>
     <message condition='$PLASTER_PARAM_FeatureSelect -contains "AzureAutomation"'>Creating folder structure for Azure Automation</message>
     <file condition='$PLASTER_PARAM_FeatureSelect -contains "AzureAutomation"' source='azure-automation/**' destination='azure-automation/'/>
     <message condition='$PLASTER_PARAM_FeatureSelect -contains "UserManagement"'>Creating folder structure for User Management</message>
