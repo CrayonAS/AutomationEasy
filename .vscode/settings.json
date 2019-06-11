@@ -1,8 +1,9 @@
 {
     "files.trimTrailingWhitespace": true,
-    "[markdown]": {
-        "files.trimTrailingWhitespace": false
-    },
     "files.trimFinalNewlines": true,
+    "[markdown]": {
+        "files.trimTrailingWhitespace": false,
+        "files.trimFinalNewlines": false
+    },
     "files.encoding": "utf8bom"
 }
