@@ -5,7 +5,7 @@ Install-PackageProvider -Name NuGet -Force -MinimumVersion 2.8.5.201
 Get-Module -ListAvailable PackageManagement, PowerShellGet
 
 #Unregister-PSRepository -Name 'PSGallery'
-Register-PSRepository -Default -InstallationPolicy Trusted
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 Get-PSRepository
 
 Install-Module PSScriptAnalyzer -Scope CurrentUser
